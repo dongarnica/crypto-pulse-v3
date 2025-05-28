@@ -1,0 +1,89 @@
+# Docker ignore file for Crypto Pulse V3
+# Ignore development files
+.env.local
+.env.development
+*.log
+*.pid
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Project specific
+logs/
+*.sqlite
+*.db
+temp/
+tmp/
+
+# Cache directories
+backtest_cache/*
+!backtest_cache/.gitkeep
+
+# Test files
+test_*.txt
+*.test
+coverage.xml
+.coverage
+.pytest_cache/
+
+# Documentation build
+docs/_build/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# Credentials (extra safety)
+*.key
+*.pem
+*.crt
+credentials/
+
+# Large data files
+*.csv
+*.json
+data/*.parquet
+data/*.h5

@@ -9,7 +9,7 @@ import websockets
 import logging
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Dict, List, Callable, Optional
+from typing import Dict, List, Callable, Optional, Any
 from dataclasses import dataclass
 import pandas as pd
 
@@ -67,8 +67,8 @@ class BinanceDataStreamer:
         """Initialize Binance client and socket manager."""
         try:
             self.client = await AsyncClient.create(
-                api_key=settings.api.binance_api_key,
-                api_secret=settings.api.binance_secret_key
+                api_key=settings.binance_api_key,
+                api_secret=settings.binance_secret_key
             )
             self.socket_manager = BinanceSocketManager(self.client)
             logger.info("Binance client initialized successfully")
@@ -304,7 +304,74 @@ class BinanceDataStreamer:
         if self.client:
             await self.client.close_connection()
             logger.info("Closed Binance client connection")
-
+    
+    async def get_current_price(self, symbol: str) -> Optional[float]:
+        """
+        Get current market price for symbol from Binance ticker API.
+        
+        Args:
+            symbol: Trading pair symbol (e.g., 'BTCUSDT')
+            
+        Returns:
+            Current price as float, or None if error
+        """
+        try:
+            if not self.client:
+                await self.initialize()
+            
+            # Get 24hr ticker statistics (includes current price)
+            ticker = await self.client.get_ticker(symbol=symbol)
+            
+            if ticker and 'price' in ticker:
+                current_price = float(ticker['price'])
+                logger.debug(f"Got current price for {symbol}: ${current_price}")
+                return current_price
+            
+            logger.warning(f"No price data returned for {symbol}")
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error getting current price for {symbol}: {e}")
+            return None
+    
+    async def get_symbol_ticker(self, symbol: str) -> Optional[Dict[str, Any]]:
+        """
+        Get comprehensive ticker information for symbol.
+        
+        Args:
+            symbol: Trading pair symbol (e.g., 'BTCUSDT')
+            
+        Returns:
+            Ticker data including price, volume, change, etc.
+        """
+        try:
+            if not self.client:
+                await self.initialize()
+            
+            ticker = await self.client.get_ticker(symbol=symbol)
+            
+            if ticker:
+                return {
+                    'symbol': ticker['symbol'],
+                    'price': float(ticker['price']),
+                    'price_change': float(ticker['priceChange']),
+                    'price_change_percent': float(ticker['priceChangePercent']),
+                    'high_price': float(ticker['highPrice']),
+                    'low_price': float(ticker['lowPrice']),
+                    'volume': float(ticker['volume']),
+                    'quote_volume': float(ticker['quoteVolume']),
+                    'open_price': float(ticker['openPrice']),
+                    'prev_close': float(ticker['prevClosePrice']),
+                    'bid_price': float(ticker['bidPrice']),
+                    'ask_price': float(ticker['askPrice']),
+                    'last_trade_time': ticker['closeTime']
+                }
+            
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error getting ticker for {symbol}: {e}")
+            return None
 
 class DataStreamer:
     """Main data streaming coordinator."""

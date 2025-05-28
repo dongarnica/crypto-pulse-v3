@@ -1,0 +1,43 @@
+# Docker Compose override for development environment
+version: '3.8'
+
+services:
+  app:
+    build:
+      target: development
+    volumes:
+      # Mount source code for hot reload during development
+      - .:/app
+      - /app/__pycache__
+      - /app/src/__pycache__
+    environment:
+      - ENVIRONMENT=development
+      - LOG_LEVEL=DEBUG
+      - ENABLE_HOT_RELOAD=true
+    ports:
+      # Expose additional ports for development
+      - "8000:8000"  # API server
+      - "8001:8001"  # Monitoring dashboard
+      - "8888:8888"  # Jupyter notebook (if needed)
+    command: ["python", "-m", "uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+  postgres:
+    environment:
+      - POSTGRES_LOG_STATEMENT=all
+      - POSTGRES_LOG_MIN_DURATION_STATEMENT=0
+    ports:
+      - "5432:5432"
+    volumes:
+      # Mount postgres data for development persistence
+      - postgres_dev_data:/var/lib/postgresql/data
+      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
+
+  redis:
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_dev_data:/data
+
+volumes:
+  postgres_dev_data:
+  redis_dev_data:

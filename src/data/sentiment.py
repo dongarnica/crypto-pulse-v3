@@ -51,7 +51,7 @@ class PerplexityAIClient:
     """Client for Perplexity AI API integration."""
     
     def __init__(self):
-        self.api_key = settings.api.perplexity_api_key
+        self.api_key = settings.perplexity_api_key
         self.base_url = "https://api.perplexity.ai"
         self.session: Optional[aiohttp.ClientSession] = None
     

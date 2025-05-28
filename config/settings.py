@@ -30,13 +30,18 @@ class Settings(BaseSettings):
     min_daily_volume_usd: int = Field(default=50000000, env="MIN_DAILY_VOLUME_USD")
     min_daily_volatility: float = Field(default=0.02, env="MIN_DAILY_VOLATILITY")
     
-    # Trading pairs to monitor
+    # Alpaca crypto trading pairs (slash format as required by Alpaca)
+    alpaca_crypto_pairs: List[str] = [
+        "AAVE/USD", "BCH/USD", "BTC/USD", "DOGE/USD", "DOT/USD",
+        "ETH/USD", "LINK/USD", "LTC/USD", "SUSHI/USD", "UNI/USD", 
+        "USDT/USD", "XRP/USD", "YFI/USD"
+    ]
+    
+    # Binance trading pairs for market data and analysis
     trading_pairs: List[str] = [
-        "BTCUSDT", "ETHUSDT", "ADAUSDT", "DOTUSDT", "LINKUSDT",
-        "LTCUSDT", "BCHUSDT", "XLMUSDT", "EOSUSDT", "TRXUSDT",
-        "BNBUSDT", "XRPUSDT", "SOLUSDT", "AVAXUSDT", "MATICUSDT",
-        "ALGOUSDT", "ATOMUSDT", "FILUSDT", "UNIUSDT", "AAVEUSDT",
-        "SUSHIUSDT", "COMPUSDT", "MKRUSDT", "YFIUSDT", "SNXUSDT"
+        "AAVEUSDT", "BCHUSDT", "BTCUSDT", "DOGEUSDT", "DOTUSDT",
+        "ETHUSDT", "LINKUSDT", "LTCUSDT", "SUSHIUSDT", "UNIUSDT",
+        "USDTUSDT", "XRPUSDT", "YFIUSDT"
     ]
     
     # Risk Management

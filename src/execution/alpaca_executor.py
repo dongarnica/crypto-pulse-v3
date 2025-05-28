@@ -240,10 +240,10 @@ class AlpacaExecutor:
                 'buying_power': float(account.buying_power),
                 'cash': float(account.cash),
                 'portfolio_value': float(account.portfolio_value),
-                'day_trade_count': account.day_trade_count,
-                'pattern_day_trader': account.pattern_day_trader,
-                'trading_blocked': account.trading_blocked,
-                'account_blocked': account.account_blocked
+                'day_trade_count': getattr(account, 'day_trade_count', 0),
+                'pattern_day_trader': getattr(account, 'pattern_day_trader', False),
+                'trading_blocked': getattr(account, 'trading_blocked', False),
+                'account_blocked': getattr(account, 'account_blocked', False)
             }
             
         except Exception as e:
@@ -303,12 +303,22 @@ class AlpacaExecutor:
         """Convert OrderRequest to Alpaca order format."""
         side = OrderSide.BUY if order_request.side == 'BUY' else OrderSide.SELL
         
+        # Determine if this is a crypto trade based on symbol format
+        # Alpaca crypto symbols use slash format (e.g., "BTC/USD")
+        is_crypto = '/' in order_request.symbol and any(
+            order_request.symbol.upper() in pair 
+            for pair in settings.alpaca_crypto_pairs
+        )
+        
+        # Crypto orders require GTC, stock orders can use DAY
+        default_tif = TimeInForce.GTC if is_crypto else TimeInForce.DAY
+        
         if order_request.order_type == 'MARKET':
             return MarketOrderRequest(
                 symbol=order_request.symbol,
                 qty=float(order_request.quantity),
                 side=side,
-                time_in_force=TimeInForce.DAY
+                time_in_force=default_tif
             )
         elif order_request.order_type == 'LIMIT':
             return LimitOrderRequest(
@@ -425,7 +435,7 @@ class AlpacaExecutor:
         try:
             with db_manager.get_session() as session:
                 positions = session.query(Position).filter(
-                    Position.status == 'ACTIVE'
+                    Position.is_open == True
                 ).all()
                 
                 for pos in positions:
@@ -457,6 +467,16 @@ class AlpacaExecutor:
         """Update position record after closing."""
         # Implementation would update Position table after closing
         pass
+    
+    async def cleanup(self):
+        """Cleanup resources."""
+        try:
+            # Clear caches
+            self.position_cache.clear()
+            self.active_orders.clear()
+            logger.info("AlpacaExecutor cleanup completed")
+        except Exception as e:
+            logger.error(f"Error during cleanup: {e}")
 
 
 # Global executor instance

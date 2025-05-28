@@ -1,0 +1,31 @@
+Test Results:
+==================================================
+Starting price method tests...
+✅ Imports successful
+❌ Test failed: APIError(code=0): Service unavailable from a restricted location according to 'b. Eligibility' in https://www.binance.com/en/terms. Please contact customer service if you believe you received this message in error.
+Traceback: Traceback (most recent call last):
+  File "/workspaces/crypto-pulse-v3/test_price_method.py", line 26, in test_price_methods
+    await data_streamer.initialize()
+  File "/workspaces/crypto-pulse-v3/src/data/binance_stream.py", line 428, in initialize
+    await self.binance_streamer.initialize()
+  File "/workspaces/crypto-pulse-v3/src/data/binance_stream.py", line 69, in initialize
+    self.client = await AsyncClient.create(
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/codespace/.local/lib/python3.12/site-packages/binance/client.py", line 7866, in create
+    await self.ping()
+  File "/home/codespace/.local/lib/python3.12/site-packages/binance/client.py", line 7988, in ping
+    return await self._get('ping', version=self.PRIVATE_API_VERSION)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/codespace/.local/lib/python3.12/site-packages/binance/client.py", line 7953, in _get
+    return await self._request_api('get', path, signed, version, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/codespace/.local/lib/python3.12/site-packages/binance/client.py", line 7916, in _request_api
+    return await self._request(method, uri, signed, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/codespace/.local/lib/python3.12/site-packages/binance/client.py", line 7899, in _request
+    return await self._handle_response(response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/codespace/.local/lib/python3.12/site-packages/binance/client.py", line 7907, in _handle_response
+    raise BinanceAPIException(response, response.status, await response.text())
+binance.exceptions.BinanceAPIException: APIError(code=0): Service unavailable from a restricted location according to 'b. Eligibility' in https://www.binance.com/en/terms. Please contact customer service if you believe you received this message in error.
+

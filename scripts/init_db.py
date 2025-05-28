@@ -20,31 +20,38 @@ from sqlalchemy.orm import sessionmaker
 
 from config.settings import settings
 from src.core.models import Base
-from src.core.database import get_database, get_async_database
+from src.core.database import get_async_database, db_manager
 
 logger = logging.getLogger(__name__)
 
 
 async def create_database_if_not_exists():
     """Create the main database if it doesn't exist."""
+    # Parse database URL to get connection components
+    import urllib.parse
+    parsed = urllib.parse.urlparse(settings.database_url)
+    
     # Connect to PostgreSQL server (not to our specific database)
-    server_url = f"postgresql://{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{settings.DB_PORT}/postgres"
+    server_url = f"postgresql://{parsed.username}:{parsed.password}@{parsed.hostname}:{parsed.port}/postgres"
     
     try:
         conn = await asyncpg.connect(server_url)
         
+        # Extract database name from path
+        db_name = parsed.path.lstrip('/')
+        
         # Check if database exists
         result = await conn.fetchval(
             "SELECT 1 FROM pg_database WHERE datname = $1", 
-            settings.DB_NAME
+            db_name
         )
         
         if not result:
-            logger.info(f"Creating database '{settings.DB_NAME}'...")
-            await conn.execute(f'CREATE DATABASE "{settings.DB_NAME}"')
+            logger.info(f"Creating database '{db_name}'...")
+            await conn.execute(f'CREATE DATABASE "{db_name}"')
             logger.info("Database created successfully")
         else:
-            logger.info(f"Database '{settings.DB_NAME}' already exists")
+            logger.info(f"Database '{db_name}' already exists")
             
         await conn.close()
         
@@ -72,9 +79,7 @@ async def create_tables():
     """Create all database tables."""
     try:
         # Use synchronous engine for table creation
-        engine = create_engine(
-            f"postgresql://{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
-        )
+        engine = create_engine(settings.database_url)
         
         logger.info("Creating database tables...")
         Base.metadata.create_all(engine)

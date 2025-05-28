@@ -496,8 +496,12 @@ class TradingEngine:
         """Determine final trading signal from all inputs."""
         try:
             # Get ensemble prediction
-            ensemble_score = ml_prediction.get('ensemble_score', 0.5)
-            confidence = ml_prediction.get('confidence', 0.0)
+            expected_return = ml_prediction.get('expected_return', 0.0)
+            confidence = ml_prediction.get('confidence_score', 0.0)
+            
+            # Convert expected return to score (0-1 scale)
+            # Map returns to probability scale: -5% to +5% return maps to 0-1 score
+            ensemble_score = max(0.0, min(1.0, (expected_return + 0.05) / 0.1))
             
             # Adjust for sentiment
             sentiment_weight = 0.2
@@ -545,15 +549,60 @@ class TradingEngine:
             return None
     
     async def _get_current_price(self, symbol: str) -> Optional[float]:
-        """Get current market price for symbol."""
+        """Get current market price for symbol from Binance with database fallback."""
         try:
-            # Get latest market data
-            df = technical_analyzer.get_market_data(symbol, timeframe='1h', limit=1)
+            # Convert symbol format if needed (Alpaca format BTC/USD -> Binance format BTCUSDT)
+            binance_symbol = self._convert_to_binance_symbol(symbol)
+            
+            # First try to get real-time price from Binance
+            current_price = await data_streamer.get_current_price(binance_symbol)
+            
+            if current_price:
+                logger.debug(f"Got real-time price for {symbol} ({binance_symbol}): ${current_price}")
+                return current_price
+            
+            logger.warning(f"Could not get real-time price for {symbol}, falling back to database")
+            
+            # Fallback to database data
+            df = technical_analyzer.get_market_data(binance_symbol, timeframe='1h', limit=1)
             if not df.empty:
-                return float(df['close'].iloc[-1])
+                fallback_price = float(df['close'].iloc[-1])
+                logger.info(f"Using database fallback price for {symbol}: ${fallback_price}")
+                return fallback_price
+                
+            logger.error(f"No price data available for {symbol} from any source")
             return None
-        except Exception:
+            
+        except Exception as e:
+            logger.error(f"Error getting current price for {symbol}: {e}")
             return None
+    
+    def _convert_to_binance_symbol(self, symbol: str) -> str:
+        """Convert symbol from Alpaca format (BTC/USD) to Binance format (BTCUSDT)."""
+        try:
+            # If already in Binance format, return as-is
+            if '/' not in symbol and symbol.endswith('USDT'):
+                return symbol
+            
+            # Convert from Alpaca format
+            if '/' in symbol:
+                base, quote = symbol.split('/')
+                if quote == 'USD':
+                    return f"{base}USDT"
+                else:
+                    return f"{base}{quote}"
+            
+            # If symbol doesn't match expected format, try to find it in trading pairs
+            for trading_pair in settings.trading_pairs:
+                if symbol.replace('/', '').replace('USD', 'USDT') == trading_pair.replace('USDT', 'USDT'):
+                    return trading_pair
+            
+            # Default fallback
+            return symbol
+            
+        except Exception as e:
+            logger.warning(f"Error converting symbol format for {symbol}: {e}")
+            return symbol
     
     async def _get_symbol_sentiment(self, symbol: str) -> float:
         """Get sentiment score for symbol."""
@@ -589,7 +638,12 @@ class TradingEngine:
                     signal_type=decision.action,
                     confidence_score=decision.confidence,
                     timeframe='1h',
-                    ensemble_score=analysis.ml_prediction.get('ensemble_score', 0.5),
+                    ensemble_score=analysis.ml_prediction.get('expected_return', 0.0),
+                    random_forest_score=analysis.ml_prediction.get('model_scores', {}).get('random_forest', 0.0),
+                    lstm_score=analysis.ml_prediction.get('model_scores', {}).get('lstm', 0.0),
+                    transformer_score=analysis.ml_prediction.get('model_scores', {}).get('transformer', 0.0),
+                    expected_return=analysis.ml_prediction.get('expected_return', 0.0),
+                    risk_score=analysis.ml_prediction.get('risk_score', 0.5),
                     technical_features=analysis.technical_features,
                     recommended_allocation=decision.recommended_allocation
                 )
